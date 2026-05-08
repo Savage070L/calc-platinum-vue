@@ -121,18 +121,12 @@
           </div>
         </div>
 
-        <div class="form-group two-col-item" :class="{ 'attention-next': needsFrequency }">
+        <div class="form-group two-col-item">
           <label for="frequency" class="label-row">
             {{ t('form.frequency') }}
             <InfoTooltip v-bind="tip('frequency')" />
-            <span v-if="needsFrequency" class="next-pill">{{ t('form.nextStep') }}</span>
           </label>
-          <select id="frequency" v-model="local.frequency" class="neu-input select-green" :class="{ 'placeholder-shown': !local.frequency }">
-            <option value="" disabled>{{ t('form.freqPlaceholder') }}</option>
-            <option value="annual">{{ t('form.freq.annual') }}</option>
-            <option value="semiannual">{{ t('form.freq.semiannual') }}</option>
-            <option value="quarterly">{{ t('form.freq.quarterly') }}</option>
-            <option value="monthly">{{ t('form.freq.monthly') }}</option>
+          <select id="frequency" v-model="local.frequency" class="neu-input select-green">
             <option value="single">{{ t('form.freq.single') }}</option>
           </select>
         </div>
