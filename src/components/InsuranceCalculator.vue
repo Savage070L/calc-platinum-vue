@@ -145,7 +145,7 @@ const formData = ref({
   dob: '',
   gender: '',
   term: 10,           // дефолт в середине допустимого диапазона 1-20
-  frequency: '',
+  frequency: 'single', // Pro Life Platinum: только единовременный взнос
   mode: 'premium_to_sa',
   sumAssured: 0,
   premium: 0,
