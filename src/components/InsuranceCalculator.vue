@@ -103,12 +103,8 @@
             <span class="ph-step-num">{{ step3Done ? '✓' : '3' }}</span>
             <span class="ph-step-text">{{ t('placeholder.step3') }}</span>
           </li>
-          <li class="ph-step" :class="{ 'ph-step-done': step4Done }">
-            <span class="ph-step-num">{{ step4Done ? '✓' : '4' }}</span>
-            <span class="ph-step-text">{{ t('placeholder.step4') }}</span>
-          </li>
           <li class="ph-step" :class="{ 'ph-step-done': step5Done }">
-            <span class="ph-step-num">{{ step5Done ? '✓' : '5' }}</span>
+            <span class="ph-step-num">{{ step5Done ? '✓' : '4' }}</span>
             <span class="ph-step-text">{{ t('placeholder.step5') }}</span>
           </li>
         </ul>
@@ -236,8 +232,7 @@ const stepFieldMap = [
   { stepSel: '.ph-steps .ph-step:nth-child(1)', fieldSel: '#dob',                                   done: step1Done },
   { stepSel: '.ph-steps .ph-step:nth-child(2)', fieldSel: '.input-form .form-group .radio-group',  done: step2Done, anchor: 'bottom-center' },
   { stepSel: '.ph-steps .ph-step:nth-child(3)', fieldSel: '#premium, #sumAssured',                  done: step3Done },
-  { stepSel: '.ph-steps .ph-step:nth-child(4)', fieldSel: '#frequency',                             done: step4Done },
-  { stepSel: '.ph-steps .ph-step:nth-child(5)', fieldSel: '.term-slider',                           done: step5Done },
+  { stepSel: '.ph-steps .ph-step:nth-child(4)', fieldSel: '.term-slider',                           done: step5Done },
 ];
 
 function computeArrows() {
