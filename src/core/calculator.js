@@ -358,6 +358,18 @@ export class PolicyCalculator {
 
   // ─── Таблица резервов (Platinum) ─────────────────────────────────────────────
 
+  /**
+   * Возвращает массив коэффициентов выкупной суммы для заданного срока.
+   * Берётся из config.surrenderFactors[term]. Для несуществующего ключа —
+   * fallback к ближайшему доступному (как в _resolveTermKey).
+   */
+  _getSurrenderFactors(term) {
+    const tbl = this.config.surrenderFactors;
+    if (!tbl) return null;
+    const key = this._resolveTermKey(tbl, term);
+    return tbl[key] ?? null;
+  }
+
   calculateReserves(dob, gender, term, frequency, sumAssured, kMult = 1.0, lAdd = 0.0) {
     const x    = PolicyCalculator.calculateAge(dob);
     const t    = frequency === 'single' ? 1 : term;
@@ -373,6 +385,12 @@ export class PolicyCalculator {
     const Nxt = comm.Nx(x + t);
     const Nx3 = comm.Nx(x + 3);
     const Dx_2 = comm.Dx(x + 2); // используется в формуле alpha_k для k=1
+
+    // Pro Life Platinum (single-pay): выкупная по lookup-таблице.
+    //   surrender(k<term) = premium × surrenderFactors[term][k-1]
+    //   surrender(k=term) = SA  (актуарный резерв, который всегда равен СС при k=n)
+    const surrFactors = (frequency === 'single') ? this._getSurrenderFactors(term) : null;
+    const premium = BP * sumAssured;
 
     const reserves = [];
 
@@ -413,8 +431,21 @@ export class PolicyCalculator {
       const surrenderRate = reserveRate - (1.0 - reserveRate) * expenses.G8;
 
       const reserve  = reserveRate * sumAssured;
-      let surrender  = Math.max(surrenderRate * sumAssured, 0.0);
-      if (k === term) surrender = sumAssured;
+
+      // ── Расчёт выкупной суммы ──
+      let surrender;
+      if (surrFactors && k < term) {
+        // Single-pay, не последний год — берём из договорной lookup-таблицы.
+        // factor — это коэффициент к разовой премии; индекс [k-1] = year k.
+        const factor = surrFactors[k - 1];
+        surrender = factor !== undefined ? factor * premium : Math.max(surrenderRate * sumAssured, 0.0);
+      } else if (k === term) {
+        // Последний год — выкупная = СС (= актуарный резерв на момент дожития).
+        surrender = sumAssured;
+      } else {
+        // Рассрочка — старая актуарная формула с штрафом G8.
+        surrender = Math.max(surrenderRate * sumAssured, 0.0);
+      }
 
       const reducedSA = Ax_n_k > 0 ? roundHalfUp(surrender / Ax_n_k) : 0;
 
