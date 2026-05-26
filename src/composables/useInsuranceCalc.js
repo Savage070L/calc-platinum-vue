@@ -252,6 +252,17 @@ export function useInsuranceCalc() {
       const totalPremium = finalResult.grossPremium + totalRiderPremium;
       const maturityAmount = finalResult.sumAssured;
 
+      // Страховая сумма по доп. покрытию не может превышать СС по основному.
+      const { t: ti } = useI18n();
+      const finalSA = finalResult.sumAssured;
+      const hasRiderOverSA = Object.values(allowedRidersSelection).some(
+        (r) => r?.enabled && typeof r.sum === 'number' && r.sum > finalSA,
+      );
+      if (hasRiderOverSA) {
+        errors.value = [...errors.value, ti('errors.riderSumExceedsSA')];
+        error.value = errors.value.join('; ');
+      }
+
       result.value = {
         ...finalResult,
         riders: finalRidersResult.riders,
