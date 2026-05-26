@@ -49,12 +49,10 @@ const props = defineProps({ result: { type: Object, default: null } });
 
 const showTable = ref(window.innerWidth > 720);
 
-// В выкупной таблице 1-й год всегда показываем как 0 ₸ (стандарт продукта).
-const tableRows = computed(() =>
-  (props.result?.reserves ?? []).map((r) =>
-    r.year === 1 ? { ...r, surrender: 0 } : r
-  )
-);
+// Pro Life Platinum: оплата всегда единовременная, поэтому выкупная сумма
+// за 1-й год отлична от нуля (премия уже целиком уплачена при заключении
+// договора). Отображаем значение из engine как есть.
+const tableRows = computed(() => props.result?.reserves ?? []);
 
 function policyDate(yearNum) {
   const base = props.result?.calcDate || new Date().toISOString().slice(0, 10);
