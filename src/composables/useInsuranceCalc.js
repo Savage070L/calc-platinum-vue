@@ -252,15 +252,34 @@ export function useInsuranceCalc() {
       const totalPremium = finalResult.grossPremium + totalRiderPremium;
       const maturityAmount = finalResult.sumAssured;
 
-      // Страховая сумма по доп. покрытию не может превышать СС по основному.
+      // ─── Пост-валидация результата ───────────────────────────────────────
+      //   1. СС по доп. покрытию не должна превышать СС по основному.
+      //   2. Для детей 7-16 лет СС по основному ≤ 5 000 000 ₸.
+      // При нарушении — расчёт не отображается.
       const { t: ti } = useI18n();
       const finalSA = finalResult.sumAssured;
+      const postErrs = [];
+
       const hasRiderOverSA = Object.values(allowedRidersSelection).some(
         (r) => r?.enabled && typeof r.sum === 'number' && r.sum > finalSA,
       );
-      if (hasRiderOverSA) {
-        errors.value = [...errors.value, ti('errors.riderSumExceedsSA')];
+      if (hasRiderOverSA) postErrs.push(ti('errors.riderSumExceedsSA'));
+
+      const CHILD_MIN_AGE = 7, CHILD_MAX_AGE = 16, CHILD_MAX_SA = 5_000_000;
+      if (x >= CHILD_MIN_AGE && x <= CHILD_MAX_AGE && finalSA > CHILD_MAX_SA) {
+        postErrs.push(ti('errors.childMaxSA', {
+          age: x,
+          min: CHILD_MIN_AGE,
+          max: CHILD_MAX_AGE,
+          sa:  formatMoney(CHILD_MAX_SA, '₸'),
+        }));
+      }
+
+      if (postErrs.length > 0) {
+        errors.value = [...errors.value, ...postErrs];
         error.value = errors.value.join('; ');
+        result.value = null;
+        return;
       }
 
       result.value = {
