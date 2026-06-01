@@ -452,9 +452,11 @@ watch(() => props.result, (r) => {
 .hcol-label, .hcol-sum, .hcol-prem {
   font-size: 13px; text-transform: uppercase;
   letter-spacing: 0.5px; opacity: 0.5; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 4px;
+  white-space: nowrap;
 }
-.hcol-label { text-align: left; }
-.hcol-sum, .hcol-prem { text-align: center; }
+.hcol-label { justify-content: flex-start; }
+.hcol-sum, .hcol-prem { justify-content: center; }
 .hcol-short { display: none; }
 
 .total-row { padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
