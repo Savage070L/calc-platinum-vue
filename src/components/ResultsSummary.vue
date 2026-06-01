@@ -105,7 +105,7 @@ const props = defineProps({ result: { type: Object, default: null } });
 // Options for v-fit-text on the main badge values — shrinks to fit container
 const badgeFitOpts = computed(() => ({
   min: 18,
-  max: props.result?.annuityPayment > 0 ? 52 : 86,
+  max: props.result?.annuityPayment > 0 ? 58 : 86,
 }));
 
 const FREQ_LABELS = computed(() => dict.value.form.freq);
@@ -318,8 +318,10 @@ watch(() => props.result, (r) => {
 }
 
 .badge-label {
-  position: relative;
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-size: 15px;
   font-weight: 800;
   color: var(--text-light);
@@ -328,13 +330,21 @@ watch(() => props.result, (r) => {
   white-space: nowrap;
   max-width: 100%;
   text-align: center;
-  padding: 0 22px;
 }
-.badge-label :deep(.info-wrap) {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+
+/* (i) внутри верхних бейджей — белая обводка на градиентном фоне */
+.summary-badge :deep(.info-btn) {
+  border-color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.92);
+  background: transparent;
+  opacity: 0.7;
+}
+.summary-badge :deep(.info-btn:hover),
+.summary-badge :deep(.info-btn.active) {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.9);
+  color: #fff;
+  opacity: 1;
 }
 
 .badge-value {
@@ -344,9 +354,10 @@ watch(() => props.result, (r) => {
   line-height: 1.02;
   white-space: nowrap;
   max-width: 100%;
+  margin-top: 2px;
 }
 .top-badges.has-annuity .badge-value {
-  font-size: 52px;
+  font-size: 58px;
 }
 
 /* ── Badge color themes ───────────────── */
