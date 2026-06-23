@@ -137,13 +137,12 @@
         </div>
 
         <div class="form-group two-col-item">
-          <label for="frequency" class="label-row">
+          <label class="label-row">
             {{ t('form.frequency') }}
             <InfoTooltip v-bind="tip('frequency')" />
           </label>
-          <select id="frequency" v-model="local.frequency" class="neu-input select-green">
-            <option value="single">{{ t('form.freq.single') }}</option>
-          </select>
+          <!-- Platinum: всегда единовременный взнос — статичное поле, не выбор -->
+          <div class="neu-input static-field">{{ t('form.freq.single') }}</div>
         </div>
       </div>
 
@@ -640,6 +639,14 @@ const guaranteedPeriodSliderStyle = computed(() => {
   font-family: inherit;
 }
 .neu-input:focus { border-color: var(--accent); box-shadow: var(--shadow-btn-press); }
+/* Статичное поле (Platinum: периодичность всегда «единовременный») —
+   вид как у обычного тёмного .neu-input, но без выпадающего списка и выбора */
+.neu-input.static-field {
+  display: flex;
+  align-items: center;
+  cursor: default;
+  user-select: none;
+}
 .neu-input.hint-mode {
   color: rgba(255,255,255,0.55);
   -webkit-text-fill-color: rgba(255,255,255,0.55);
