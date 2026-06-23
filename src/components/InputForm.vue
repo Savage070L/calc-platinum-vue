@@ -8,13 +8,28 @@
         <label for="dob" class="label-row">
           {{ t('form.dob') }}
         </label>
+        <!-- Desktop / планшет: нативный date-picker -->
         <input
           id="dob"
           type="date"
           v-model="local.dob"
           :max="todayIso"
           min="1900-01-01"
-          class="neu-input"
+          class="neu-input dob-input-desktop"
+        />
+        <!-- Mobile: ручной ввод цифр с маской ДД.ММ.ГГГГ -->
+        <input
+          id="dob-mobile"
+          type="text"
+          inputmode="numeric"
+          autocomplete="bday"
+          placeholder="ДД.ММ.ГГГГ"
+          :value="dobMasked"
+          @input="onDobMaskedInput"
+          @blur="onDobMaskedBlur"
+          maxlength="10"
+          class="neu-input dob-input-mobile"
+          aria-label="Дата рождения"
         />
         <span v-if="needsDob" class="next-pill">{{ t('form.nextStepDob') }}</span>
       </div>
@@ -269,6 +284,51 @@ const { minTerm, maxTerm, maxExitAge } = PRODUCT_CONFIG;
 const local = ref({ ...props.modelValue });
 
 const todayIso = computed(() => new Date().toISOString().slice(0, 10));
+
+// ── Мобильный ввод даты рождения (маска ДД.ММ.ГГГГ) ──────────────────────────
+// На мобильных native <input type="date"> неудобен — переключаемся
+// на text-input с маской из цифр.
+const dobMasked = computed(() => {
+  const iso = local.value.dob;
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+});
+
+function onDobMaskedInput(e) {
+  // Оставляем только цифры, ограничиваем 8 знаков и расставляем точки.
+  const digits = String(e.target.value).replace(/\D/g, '').slice(0, 8);
+  let masked = '';
+  if (digits.length >= 1) masked  = digits.slice(0, 2);
+  if (digits.length >= 3) masked += '.' + digits.slice(2, 4);
+  if (digits.length >= 5) masked += '.' + digits.slice(4, 8);
+  e.target.value = masked;
+
+  // При полностью введённой дате — конвертируем в ISO и кладём в local.dob
+  if (digits.length === 8) {
+    const dd = digits.slice(0, 2);
+    const mm = digits.slice(2, 4);
+    const yy = digits.slice(4, 8);
+    const dNum = +dd, mNum = +mm, yNum = +yy;
+    if (dNum >= 1 && dNum <= 31 && mNum >= 1 && mNum <= 12 && yNum >= 1900) {
+      // Проверяем, что дата ВАЛИДНА (например, не «31 февраля»).
+      const dt = new Date(yNum, mNum - 1, dNum);
+      if (dt.getFullYear() === yNum
+          && dt.getMonth() === mNum - 1
+          && dt.getDate() === dNum) {
+        local.value.dob = `${yy}-${mm}-${dd}`;
+        return;
+      }
+    }
+    local.value.dob = '';   // невалидная — сбрасываем
+  } else {
+    local.value.dob = '';   // не полная — пусто
+  }
+}
+
+function onDobMaskedBlur() {
+  // Частичный ввод оставляем как есть: local.dob уже пуст, ошибка покажется ниже.
+}
 
 // Visual cue: sequentially highlight the next required field
 // (DOB → Gender → Term → Frequency → Amount). A first-time user clearly
@@ -637,6 +697,16 @@ select.select-green option {
 }
 select.select-green option:disabled {
   color: rgba(26,46,63,0.4);
+}
+
+/* По умолчанию (desktop / планшет) показываем native date-picker, мобильный input скрыт */
+.dob-input-mobile { display: none; }
+.dob-input-desktop { display: block; }
+
+@media (max-width: 720px) {
+  /* На мобильных native date-picker неудобен — показываем text-input с маской */
+  .dob-input-desktop { display: none; }
+  .dob-input-mobile  { display: block; }
 }
 
 input[type="date"].neu-input {
