@@ -4,68 +4,130 @@
       class="info-btn"
       type="button"
       :class="{ active: open }"
-      @click.stop="toggle"
+      @click.stop.prevent="onClick"
+      @mouseenter="onEnter"
+      @mouseleave="onLeave"
     >i</button>
 
     <Teleport to="body">
-      <!-- backdrop to close on outside click -->
-      <div v-if="open" class="info-backdrop" @click="open = false" />
+      <!-- Прозрачная подложка: ловит клик/тап вне закреплённой подсказки -->
+      <div v-if="open && pinned" class="info-backdrop" @click="close" />
 
-      <div v-if="open" class="info-popup" :style="popupStyle">
-        <div class="popup-head">
-          <span class="popup-title-text">{{ title }}</span>
-          <button class="popup-x" type="button" @click="open = false">✕</button>
-        </div>
-        <div class="popup-body" v-html="text" />
+      <!-- Пузырь-подсказка у иконки — один и тот же на десктопе и мобильном -->
+      <div
+        v-if="open"
+        class="info-tip"
+        :class="[`tip-${placement}`, { pinned }]"
+        :style="tipStyle"
+        @mouseenter="onEnter"
+        @mouseleave="onLeave"
+        @click.stop
+      >
+        <span class="tip-arrow" :style="arrowStyle" />
+        <div class="tip-title">{{ title }}</div>
+        <div class="tip-body" v-html="text" />
       </div>
     </Teleport>
   </span>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
 
 defineProps({
   title: { type: String, required: true },
   text:  { type: String, required: true },
 });
 
-const open   = ref(false);
-const btnRef = ref(null);
-const pos    = ref({ left: 0, top: 0 });
+const open      = ref(false);   // подсказка видна
+const pinned    = ref(false);   // закреплена кликом/тапом (не зависит от мыши)
+const btnRef    = ref(null);
+const pos       = ref({ left: 0, top: 0 });
+const tipW      = ref(330);
+const arrowLeft = ref(160);
+const placement = ref('bottom'); // bottom — пузырь под иконкой, top — над ней
 
-function toggle() {
-  open.value = !open.value;
-  if (open.value) nextTick(calcPos);
+const canHover = () =>
+  typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
+
+onMounted(() => window.addEventListener('keydown', onKey));
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey);
+  clearTimeout(hideTimer);
+});
+
+function onKey(e) {
+  if (e.key === 'Escape') close();
+}
+
+// ── Hover (только устройства с мышью): показать при наведении, спрятать при
+// уходе. Небольшая задержка позволяет перевести курсор с иконки на пузырь.
+let hideTimer = null;
+function onEnter() {
+  if (!canHover()) return;
+  clearTimeout(hideTimer);
+  if (!open.value) show();
+}
+function onLeave() {
+  if (!canHover() || pinned.value) return;
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => { open.value = false; }, 140);
+}
+
+// Клик/тап: закрепить; повторный клик по иконке или клик вне — закрыть.
+function onClick() {
+  if (pinned.value) { close(); return; }
+  show();
+  pinned.value = true;
+}
+
+function show() {
+  open.value = true;
+  nextTick(calcPos);
+}
+function close() {
+  open.value = false;
+  pinned.value = false;
 }
 
 function calcPos() {
   if (!btnRef.value) return;
   const r = btnRef.value.getBoundingClientRect();
-  const W = 320;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  // На узких экранах пузырь занимает почти всю ширину
+  const W = Math.min(330, vw - 24);
+  tipW.value = W;
 
-  // Horizontal: try to align left edge with button; clamp so popup stays in viewport
-  let left = r.left;
+  // Горизонталь: центр пузыря по центру иконки, с прижимом к краям экрана
+  let left = r.left + r.width / 2 - W / 2;
   if (left + W > vw - 12) left = vw - W - 12;
   if (left < 12) left = 12;
 
-  // Vertical: below button; if not enough room, above
-  let top = r.bottom + 8;
-  if (top + 280 > vh) top = Math.max(12, r.top - 288);
+  // Стрелочка указывает на центр иконки
+  arrowLeft.value = Math.min(Math.max(r.left + r.width / 2 - left, 16), W - 16);
 
-  pos.value = { left, top };
+  // Вертикаль: под иконкой; если не помещается — над ней
+  const estH = 220;
+  if (r.bottom + 10 + estH > vh && r.top - 10 - estH > 0) {
+    placement.value = 'top';
+    pos.value = { left, top: r.top - 10 };
+  } else {
+    placement.value = 'bottom';
+    pos.value = { left, top: r.bottom + 10 };
+  }
 }
 
-const popupStyle = computed(() => ({
-  left: pos.value.left + 'px',
-  top:  pos.value.top  + 'px',
+const tipStyle = computed(() => ({
+  left:  pos.value.left + 'px',
+  top:   pos.value.top  + 'px',
+  width: tipW.value + 'px',
 }));
+const arrowStyle = computed(() => ({ left: arrowLeft.value + 'px' }));
 </script>
 
 <style>
-/* ── Info button ─────────────────────────────── */
+/* ── Иконка (i) ─────────────────────────────── */
 .info-wrap {
   display: inline-flex;
   align-items: center;
@@ -82,7 +144,7 @@ const popupStyle = computed(() => ({
   font-size: 10px; font-weight: 700;
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
-  cursor: pointer;
+  cursor: help;
   display: inline-flex; align-items: center; justify-content: center;
   opacity: 0.6;
   transition: opacity 0.15s, background 0.15s, transform 0.15s;
@@ -96,59 +158,78 @@ const popupStyle = computed(() => ({
   transform: scale(1.1);
 }
 
-/* ── Backdrop ───────────────────────────────── */
+/* ── Подложка для закрытия по клику/тапу вне ── */
 .info-backdrop {
   position: fixed; inset: 0;
   z-index: 9990;
   background: transparent;
 }
 
-/* ── Popup ──────────────────────────────────── */
-.info-popup {
+/* ── Пузырь-подсказка ───────────────────────── */
+.info-tip {
   position: fixed;
   z-index: 9999;
-  background: #ffffff;
-  border: 1px solid rgba(45,81,113,0.18);
-  border-radius: 14px;
-  width: 320px;
-  overflow: hidden;
-  animation: popIn 0.18s cubic-bezier(0.34,1.56,0.64,1) both;
+  background: linear-gradient(160deg, #24405C, #1B2F47);
+  border: 1px solid rgba(95, 189, 245, 0.28);
+  border-radius: 12px;
+  padding: 12px 14px 13px;
+  box-shadow: 0 14px 38px rgba(5, 14, 24, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  pointer-events: auto;
+  max-height: 62vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
-@keyframes popIn {
-  from { opacity: 0; transform: scale(0.88) translateY(-6px); }
-  to   { opacity: 1; transform: scale(1)    translateY(0); }
+.tip-bottom { animation: tipInDown 0.16s ease-out both; transform-origin: top center; }
+.tip-top    { animation: tipInUp   0.16s ease-out both; transform: translateY(-100%); transform-origin: bottom center; }
+@keyframes tipInDown {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes tipInUp {
+  from { opacity: 0; transform: translateY(calc(-100% + 4px)) scale(0.97); }
+  to   { opacity: 1; transform: translateY(-100%)             scale(1); }
 }
 
-.popup-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 14px 10px;
-  background: linear-gradient(135deg, #294A69, #2D5171);
-  gap: 8px;
+/* Стрелочка к иконке */
+.tip-arrow {
+  position: absolute;
+  width: 12px; height: 12px;
+  border: 1px solid rgba(95, 189, 245, 0.28);
+  transform: translateX(-50%) rotate(45deg);
 }
-.popup-title-text {
-  font-size: 13px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  color: white; flex: 1;
+.tip-bottom .tip-arrow {
+  top: -7px;
+  background: #24405C;
+  border-right: none; border-bottom: none;
 }
-.popup-x {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  font-size: 11px; font-weight: 700;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; padding: 0;
-  transition: background 0.15s;
+.tip-top .tip-arrow {
+  bottom: -7px;
+  background: #1B2F47;
+  border-left: none; border-top: none;
 }
-.popup-x:hover { background: rgba(255,255,255,0.35); }
 
-.popup-body {
-  padding: 13px 15px 15px;
-  font-size: 13px; line-height: 1.6;
-  color: #1A2E3F;
+.tip-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #A1C95A;
+  margin-bottom: 6px;
 }
-.popup-body b { font-weight: 700; color: #1F3A55; }
-.popup-body br + br { display: block; margin-top: 6px; }
+.tip-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #E2EEF8;
+}
+.tip-body b { font-weight: 700; color: #FFFFFF; }
+
+/* Закреплённая подсказка чуть заметнее */
+.info-tip.pinned { border-color: rgba(161, 201, 90, 0.55); }
+
+/* На мобильном — текст крупнее для удобства чтения */
+@media (max-width: 720px) {
+  .tip-title { font-size: 13px; }
+  .tip-body  { font-size: 14.5px; line-height: 1.6; }
+}
 </style>
