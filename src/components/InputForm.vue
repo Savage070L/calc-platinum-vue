@@ -61,13 +61,8 @@
           </select>
         </div>
 
-        <div class="form-group three-col-item three-col-item--wide">
-          <label for="currencyMode" class="label-row">{{ t('form.currencyToggleLabel') }}</label>
-          <select id="currencyMode" v-model="currencyMode" class="neu-input select-green">
-            <option value="USD" :disabled="!usdRate">{{ t('form.currencyUsd') }}</option>
-            <option value="KZT">{{ t('form.currencyKzt') }}</option>
-          </select>
-        </div>
+        <!-- Pro Life Platinum — продукт только в долларах: переключатель валюты убран,
+             ввод всегда в USD (currencyMode зафиксирован в 'USD'). -->
 
         <div class="form-group three-col-item three-col-item--slim">
           <label class="label-row">

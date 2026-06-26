@@ -8,6 +8,7 @@ import { PolicyCalculator } from '../core/calculator.js';
 import { RidersCalculator } from '../core/riders.js';
 import { PRODUCT_CONFIG } from '../config/product.js';
 import { useI18n } from '../i18n/index.js';
+import { useCurrencyRate } from './useCurrencyRate.js';
 
 // Группы рейдеров (radio в UI):
 //   group1: один из { accidental_death, traffic_death }
@@ -104,13 +105,15 @@ export function validateInputs(inputs) {
     errors.push(t('errors.premiumRequired'));
   }
 
-  // Минимальный взнос по периодичности — только в режиме premium_to_sa
-  if (mode === 'premium_to_sa' && frequency && frequency !== 'single') {
-    const min = minPremium?.[frequency] ?? 0;
-    if (min > 0 && premium && premium < min) {
-      errors.push(t('errors.minPremium', {
-        frequency: t(`frequency.${frequency}`),
-        min: formatMoney(min, '₸'),
+  // Минимальная премия — не менее $1000 по курсу (Platinum — продукт в долларах).
+  // premium хранится в тенге даже при вводе в USD, поэтому сравниваем с $1000 × курс.
+  if (mode === 'premium_to_sa' && premium > 0) {
+    const minUsd = PRODUCT_CONFIG.minPremiumUsd ?? 1000;
+    const { usdRate } = useCurrencyRate();
+    const rate = usdRate?.value;
+    if (rate && rate > 0 && premium < minUsd * rate) {
+      errors.push(t('errors.minPremiumUsd', {
+        min: `$ ${formatMoney(minUsd)}`,
       }));
     }
   }

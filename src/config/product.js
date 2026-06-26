@@ -84,6 +84,9 @@ export const PRODUCT_CONFIG = {
     annual:     0,
   },
 
+  // Platinum — продукт в долларах: минимальная премия $1000 (по курсу НБРК).
+  minPremiumUsd: 1000,
+
   // ─── Коэффициенты периодичности взносов ──────────────────────────────────
   frequencyAdjustment: {
     annual:     1.0,
