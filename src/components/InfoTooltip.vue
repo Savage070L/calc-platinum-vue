@@ -176,9 +176,6 @@ const arrowStyle = computed(() => ({ left: arrowLeft.value + 'px' }));
   box-shadow: 0 14px 38px rgba(5, 14, 24, 0.55),
               inset 0 1px 0 rgba(255, 255, 255, 0.06);
   pointer-events: auto;
-  max-height: 62vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 .tip-bottom { animation: tipInDown 0.16s ease-out both; transform-origin: top center; }
 .tip-top    { animation: tipInUp   0.16s ease-out both; transform: translateY(-100%); transform-origin: bottom center; }
