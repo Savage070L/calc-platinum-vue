@@ -757,7 +757,6 @@ watch(result, (r, prev) => {
   color: #FFFFFF;
   box-shadow: 0 10px 28px rgba(121,183,64,0.40),
               inset 0 1px 0 rgba(255,255,255,0.30);
-  animation: phChipPulse 1.8s ease-in-out infinite;
 }
 .ph-icon {
   width: 40px;
