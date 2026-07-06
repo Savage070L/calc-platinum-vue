@@ -195,12 +195,11 @@
         </span>
         <span class="toggle-text">{{ t('form.enableAnnuity') }}</span>
         <InfoTooltip v-bind="tip('annuity')" />
-        <span class="toggle-arrow chev" :class="{ open: local.enableAnnuity }">▼</span>
+        <span class="toggle-arrow">{{ local.enableAnnuity ? '▲' : '▼' }}</span>
       </label>
     </div>
 
-    <SmoothCollapse :show="local.enableAnnuity">
-    <div class="form-grid annuity-grid">
+    <div v-if="local.enableAnnuity" class="form-grid annuity-grid">
       <!-- Периодичность выплат -->
       <div class="form-group full-width">
         <label for="annuityFrequency" class="label-row">{{ t('form.annuityFrequency') }} <InfoTooltip v-bind="tip('annuityFrequency')" /></label>
@@ -245,7 +244,6 @@
         <span v-if="local.guaranteedPeriod === 0" class="hint">{{ t('form.noGuaranteedPeriod') }}</span>
       </div>
     </div>
-    </SmoothCollapse>
   </div>
 </template>
 
@@ -254,7 +252,6 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { PolicyCalculator } from '../core/calculator.js';
 import { PRODUCT_CONFIG } from '../config/product.js';
 import InfoTooltip from './InfoTooltip.vue';
-import SmoothCollapse from './SmoothCollapse.vue';
 import CurrencyWidget from './CurrencyWidget.vue';
 import { useCurrencyRate } from '../composables/useCurrencyRate.js';
 import { useI18n } from '../i18n/index.js';
@@ -1210,60 +1207,5 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
     gap: 8px;
   }
   .toggle-text { font-size: 11px; letter-spacing: 0.03em; }
-}
-
-/* ══════════ UX-полировка: микро-анимации полей ══════════ */
-.neu-input {
-  transition: border-color 0.2s ease, box-shadow 0.25s ease;
-}
-.neu-input:focus {
-  border-color: #A1C95A;
-  box-shadow: 0 0 0 3px rgba(161,201,90,0.20);
-}
-.input-wrap {
-  transition: border-color 0.2s ease, box-shadow 0.25s ease;
-}
-.input-wrap:focus-within {
-  border-color: #A1C95A;
-  box-shadow: 0 0 0 3px rgba(161,201,90,0.20);
-}
-.input-wrap .neu-input:focus { border: none; box-shadow: none; }
-select.select-green {
-  transition: filter 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
-}
-select.select-green:hover { filter: brightness(1.07); }
-select.select-green:active { transform: scale(0.99); }
-@media (hover: hover) {
-  .radio-pill:hover span {
-    border-color: rgba(161,201,90,0.75);
-    color: #FFFFFF;
-    transform: translateY(-1px);
-  }
-}
-.radio-pill:active span { transform: translateY(0) scale(0.97); }
-.radio-pill input:checked + span {
-  box-shadow: 0 4px 14px rgba(121,183,64,0.35);
-}
-.annuity-toggle-label:hover .custom-chk {
-  box-shadow: 0 0 0 3px rgba(161,201,90,0.18);
-}
-.annuity-chk:checked ~ .custom-chk {
-  animation: chkPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes chkPop {
-  0%   { transform: scale(0.85); }
-  55%  { transform: scale(1.14); }
-  100% { transform: scale(1); }
-}
-.term-slider::-webkit-slider-thumb {
-  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease;
-}
-.term-slider:active::-webkit-slider-thumb {
-  transform: scale(1.18);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 7px rgba(161,201,90,0.18);
-}
-.term-slider:active::-moz-range-thumb {
-  transform: scale(1.18);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 7px rgba(161,201,90,0.18);
 }
 </style>

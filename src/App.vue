@@ -117,32 +117,6 @@ input[type="range"]::-moz-range-thumb {
   background: linear-gradient(135deg, var(--primary-light), var(--primary));
   cursor: pointer;
 }
-
-/* ── Единый плавно вращающийся шеврон (заменяет текстовые ▲/▼) ── */
-.chev {
-  display: inline-block;
-  transition: transform 0.3s cubic-bezier(0.33, 1, 0.68, 1);
-}
-.chev.open { transform: rotate(180deg); }
-
-/* ── Видимый фокус для клавиатурной навигации ── */
-button:focus-visible,
-select:focus-visible,
-[role="button"]:focus-visible {
-  outline: 2px solid #A1C95A;
-  outline-offset: 2px;
-}
-
-/* ── Уважение к prefers-reduced-motion: гасим декоративные keyframe-анимации.
-   transition-duration НЕ трогаем: нулевые transition ломают синхронные
-   замеры v-fit-text, а короткие transitions — это state-feedback, не motion. ── */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-  }
-}
 </style>
 
 <style scoped>

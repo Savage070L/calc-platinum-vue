@@ -51,9 +51,7 @@ export const vFitText = {
     mo.observe(el, { childList: true, characterData: true, subtree: true });
     el._fitMO = mo;
 
-    // Initial pass: сразу же (элемент уже в DOM — убирает вспышку крупного
-    // шрифта до первого paint), затем контрольный прогон после отрисовки.
-    run();
+    // Initial pass after paint
     requestAnimationFrame(() => requestAnimationFrame(run));
   },
 

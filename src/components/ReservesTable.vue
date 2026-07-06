@@ -4,10 +4,9 @@
       <span class="icon">📋</span>
       <span class="reserves-title">{{ t('table.toggle') }}</span>
       <InfoTooltip v-bind="tip('table')" />
-      <span class="reserves-arrow chev" :class="{ open: showTable }">▼</span>
+      <span class="reserves-arrow">{{ showTable ? '▲' : '▼' }}</span>
     </h3>
-    <SmoothCollapse :show="showTable">
-    <div class="reserves-body">
+    <div v-show="showTable" class="reserves-body">
       <div class="table-wrapper" ref="wrapperRef" :style="wrapperStyle">
         <table class="data-table">
           <colgroup>
@@ -23,7 +22,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, idx) in tableRows" :key="row.year" :class="{ even: idx % 2 === 0 }" :style="{ '--d': Math.min(idx, 16) * 24 + 'ms' }">
+            <tr v-for="(row, idx) in tableRows" :key="row.year" :class="{ even: idx % 2 === 0 }">
               <td class="col-year">{{ row.year }}</td>
               <td class="col-date">{{ policyDate(row.year) }}</td>
               <td class="col-surrender">
@@ -34,7 +33,6 @@
         </table>
       </div>
     </div>
-    </SmoothCollapse>
   </div>
 </template>
 
@@ -42,7 +40,6 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { formatMoney } from '../composables/useInsuranceCalc.js';
 import InfoTooltip from './InfoTooltip.vue';
-import SmoothCollapse from './SmoothCollapse.vue';
 import { useI18n } from '../i18n/index.js';
 
 const { t, tip } = useI18n();
@@ -326,15 +323,5 @@ function fmt(v) { return formatMoney(v) + '\u00A0₸'; }
   .reserves-toggle { font-size: 14px; gap: 6px; }
   .reserves-toggle .icon { width: 24px; height: 24px; font-size: 13px; }
   .reserves-arrow { font-size: 11px; }
-}
-
-/* ══════════ UX-полировка: каскадное появление строк ══════════ */
-.data-table tbody tr {
-  animation: trIn 0.3s ease both;
-  animation-delay: var(--d, 0ms);
-}
-@keyframes trIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 </style>

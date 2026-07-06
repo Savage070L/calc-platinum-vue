@@ -90,37 +90,22 @@
         </div>
         <h3 class="ph-title">{{ t('placeholder.title') }}</h3>
         <p class="ph-subtitle">{{ t('placeholder.subtitle') }}</p>
-        <div
-          class="ph-progress"
-          role="progressbar"
-          aria-valuemin="0"
-          :aria-valuemax="REQUIRED_STEPS"
-          :aria-valuenow="doneCount"
-        >
-          <div class="ph-progress-top">
-            <span class="ph-progress-label" :class="{ ready: allStepsDone }">{{ progressLabel }}</span>
-            <span class="ph-progress-pct">{{ progressPct }}%</span>
-          </div>
-          <div class="ph-progress-track">
-            <div class="ph-progress-fill" :class="{ full: allStepsDone }" :style="{ width: progressPct + '%' }"></div>
-          </div>
-        </div>
         <ul class="ph-steps">
-          <li
-            v-for="(s, i) in phSteps"
-            :key="i"
-            class="ph-step"
-            :class="{ 'ph-step-done': s.done, 'ph-step-active': i === activeStepIdx }"
-            :style="{ '--i': i }"
-            role="button"
-            tabindex="0"
-            @click="goToStep(i)"
-            @keydown.enter.prevent="goToStep(i)"
-            @keydown.space.prevent="goToStep(i)"
-          >
-            <span class="ph-step-num">{{ s.done ? '✓' : i + 1 }}</span>
-            <span class="ph-step-text">{{ s.label }}</span>
-            <span class="ph-step-go" aria-hidden="true">→</span>
+          <li class="ph-step" :class="{ 'ph-step-done': step1Done }">
+            <span class="ph-step-num">{{ step1Done ? '✓' : '1' }}</span>
+            <span class="ph-step-text">{{ t('placeholder.step1') }}</span>
+          </li>
+          <li class="ph-step" :class="{ 'ph-step-done': step2Done }">
+            <span class="ph-step-num">{{ step2Done ? '✓' : '2' }}</span>
+            <span class="ph-step-text">{{ t('placeholder.step2') }}</span>
+          </li>
+          <li class="ph-step" :class="{ 'ph-step-done': step3Done }">
+            <span class="ph-step-num">{{ step3Done ? '✓' : '3' }}</span>
+            <span class="ph-step-text">{{ t('placeholder.step3') }}</span>
+          </li>
+          <li class="ph-step" :class="{ 'ph-step-done': step5Done }">
+            <span class="ph-step-num">{{ step5Done ? '✓' : '4' }}</span>
+            <span class="ph-step-text">{{ t('placeholder.step5') }}</span>
           </li>
         </ul>
         <button
@@ -208,52 +193,6 @@ const allStepsDone = computed(() =>
   step4Done.value && step5Done.value
 );
 
-// ── Placeholder checklist: единый список шагов для рендера, прогресса и кликов ──
-const phSteps = computed(() => [
-  { done: step1Done.value, label: t('placeholder.step1') },
-  { done: step2Done.value, label: t('placeholder.step2') },
-  { done: step3Done.value, label: t('placeholder.step3') },
-  { done: step5Done.value, label: t('placeholder.step5') },
-]);
-const REQUIRED_STEPS = 4; // все видимые шаги обязательны
-const doneCount = computed(() =>
-  phSteps.value.slice(0, REQUIRED_STEPS).filter(s => s.done).length
-);
-const progressPct = computed(() => Math.round((doneCount.value / REQUIRED_STEPS) * 100));
-const progressLabel = computed(() =>
-  allStepsDone.value
-    ? t('placeholder.ready')
-    : t('placeholder.progress', { done: doneCount.value, total: REQUIRED_STEPS })
-);
-// Активный шаг — первый незавершённый (подсвечивается в чек-листе).
-const activeStepIdx = computed(() => phSteps.value.findIndex(s => !s.done));
-
-// Клик по шагу — прокрутка к соответствующему полю формы и фокус на нём.
-function goToStep(i) {
-  const m = stepFieldMap[i];
-  if (!m) return;
-  nextTick(() => {
-    const cands = Array.from(document.querySelectorAll(m.fieldSel));
-    const el = cands.find(c => c.offsetParent !== null) || cands[0];
-    if (!el) return;
-    // Сначала фокус (без прокрутки), затем плавный скролл — отложенный focus()
-    // прерывает smooth-scroll в Chrome.
-    const focusable = el.matches('input:not([type=radio]):not([type=checkbox]), select')
-      ? el
-      : el.querySelector('input:not([type=radio]):not([type=checkbox]), select');
-    if (focusable) focusable.focus({ preventScroll: true });
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Fallback: если плавный скролл не доехал (вложенные скролл-контейнеры
-    // в некоторых окружениях) — домотать мгновенно.
-    setTimeout(() => {
-      const r = el.getBoundingClientRect();
-      if (r.top < 0 || r.bottom > window.innerHeight) {
-        el.scrollIntoView({ block: 'center' });
-      }
-    }, 650);
-  });
-}
-
 // User must explicitly press the "Рассчитать" button before results show.
 const manuallyTriggered = ref(false);
 function handleCalculate() {
@@ -290,7 +229,7 @@ const vp          = ref({ w: 0, h: 0 });
 const arrowPaths  = ref([]);
 
 const stepFieldMap = [
-  { stepSel: '.ph-steps .ph-step:nth-child(1)', fieldSel: '#dob, #dob-mobile',                                   done: step1Done },
+  { stepSel: '.ph-steps .ph-step:nth-child(1)', fieldSel: '#dob',                                   done: step1Done },
   { stepSel: '.ph-steps .ph-step:nth-child(2)', fieldSel: '.input-form .form-group .radio-group',  done: step2Done, anchor: 'bottom-center' },
   { stepSel: '.ph-steps .ph-step:nth-child(3)', fieldSel: '#premium, #sumAssured',                  done: step3Done },
   { stepSel: '.ph-steps .ph-step:nth-child(4)', fieldSel: '.term-slider',                           done: step5Done },
@@ -1068,168 +1007,5 @@ watch(result, (r, prev) => {
     padding: 3px 7px;
     margin-left: 4px;
   }
-}
-
-/* ══════════ UX-полировка: прогресс, интерактивные шаги, reveal ══════════ */
-
-/* ── Прогресс заполнения ── */
-.ph-progress {
-  position: relative;
-  width: 100%;
-  max-width: 360px;
-  margin-top: 6px;
-}
-.ph-progress-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 7px;
-}
-.ph-progress-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #A8BDD3;
-  transition: color 0.3s ease;
-}
-.ph-progress-label.ready {
-  color: #C7E89B;
-}
-.ph-progress-pct {
-  font-family: 'SF Mono', 'Menlo', monospace;
-  font-size: 13px;
-  font-weight: 800;
-  color: #C7E89B;
-  flex-shrink: 0;
-}
-.ph-progress-track {
-  height: 8px;
-  border-radius: 99px;
-  background: rgba(255,255,255,0.10);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.28);
-  overflow: hidden;
-}
-.ph-progress-fill {
-  position: relative;
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #5C8E2F, #A1C95A);
-  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
-  min-width: 0;
-}
-.ph-progress-fill::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent);
-  transform: translateX(-100%);
-  animation: progShine 2.6s ease-in-out infinite;
-}
-.ph-progress-fill.full {
-  box-shadow: 0 0 12px rgba(161,201,90,0.65);
-}
-@keyframes progShine {
-  0%       { transform: translateX(-100%); }
-  55%, 100% { transform: translateX(100%); }
-}
-
-/* ── Интерактивные шаги чек-листа ── */
-.ph-step {
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.25s ease, border-color 0.25s ease, transform 0.18s ease, box-shadow 0.25s ease;
-  animation: stepIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--i, 0) * 55ms);
-}
-.ph-step:hover {
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(95,189,245,0.38);
-  transform: translateX(3px);
-}
-.ph-step:active {
-  transform: translateX(3px) scale(0.985);
-}
-.ph-step:focus-visible {
-  outline: 2px solid #A1C95A;
-  outline-offset: 2px;
-}
-@keyframes stepIn {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-/* Активный шаг — «вы находитесь здесь» */
-.ph-step-active {
-  border-color: rgba(161,201,90,0.75);
-  background: linear-gradient(90deg, rgba(161,201,90,0.16), rgba(161,201,90,0.04));
-  box-shadow: inset 3px 0 0 #A1C95A;
-}
-.ph-step-active .ph-step-num {
-  background: linear-gradient(135deg, #A1C95A 0%, #5C8E2F 100%);
-  box-shadow: 0 0 0 4px rgba(161,201,90,0.22);
-}
-
-/* Стрелка-приглашение «перейти к полю» (десктоп, при наведении) */
-.ph-step-go {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-weight: 900;
-  color: #A1C95A;
-  opacity: 0;
-  transform: translateX(-6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.ph-step:hover .ph-step-go {
-  opacity: 0.9;
-  transform: translateX(0);
-}
-.ph-step-done:hover .ph-step-go { opacity: 0.35; }
-@media (hover: none) {
-  .ph-step-go { display: none; }
-}
-
-/* Pop галочки при завершении шага */
-.ph-step-done .ph-step-num {
-  animation: numPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes numPop {
-  0%   { transform: scale(0.4); }
-  60%  { transform: scale(1.22); }
-  100% { transform: scale(1); }
-}
-
-/* Кнопка «Рассчитать»: разовый блик при активации */
-.ph-calc-btn {
-  position: relative;
-  overflow: hidden;
-}
-.ph-calc-btn--ready:active {
-  transform: translateY(0) scale(0.99);
-}
-.ph-calc-btn--ready::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0;
-  left: -45%;
-  width: 38%;
-  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.45), transparent);
-  transform: translateX(0) skewX(-20deg);
-  animation: btnShine 1.25s ease 0.3s 2 both;
-  pointer-events: none;
-}
-@keyframes btnShine {
-  to { transform: translateX(430%) skewX(-20deg); }
-}
-
-/* Появление результатов */
-.results-section {
-  animation: resultsIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes resultsIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.988); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 </style>
