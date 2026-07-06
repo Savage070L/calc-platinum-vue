@@ -31,9 +31,10 @@
     <div class="total-block">
       <h3 class="detail-toggle" @click="showDetails = !showDetails">
         <span class="icon">💰</span> {{ t('results.detailsTitle') }} <InfoTooltip v-bind="tip('details')" />
-        <span class="detail-arrow">{{ showDetails ? '▲' : '▼' }}</span>
+        <span class="detail-arrow chev" :class="{ open: showDetails }">▼</span>
       </h3>
-      <div v-show="showDetails" class="detail-body">
+      <SmoothCollapse :show="showDetails">
+      <div class="detail-body">
         <div class="total-header-row">
           <span class="hcol-label"><span class="hcol-full">{{ t('results.colCoverage') }}</span><span class="hcol-short">{{ t('results.colCoverageShort') }}</span> <InfoTooltip v-bind="tip('colCoverage')" /></span>
           <span class="hcol-sum"><span class="hcol-full">{{ t('results.colSum') }}</span><span class="hcol-short">{{ t('results.colSumShort') }}</span> <InfoTooltip v-bind="tip('colSum')" /></span>
@@ -46,12 +47,13 @@
           <span class="total-value">{{ fmtP(animated.grossPremium) }}</span>
         </div>
 
-        <div v-for="row in coverageRows" :key="row.key" class="total-row">
+        <div v-for="(row, ri) in coverageRows" :key="row.key" class="total-row" :style="{ '--d': ((ri + 1) * 45) + 'ms' }">
           <span class="total-label">{{ row.label }}</span>
           <span class="total-sum">{{ fmtRiderSum(row.key, animatedRiders[row.key]?.sum ?? row.sum) }}</span>
           <span class="total-value">{{ fmtP(animatedRiders[row.key]?.premium ?? row.premium) }}</span>
         </div>
       </div>
+      </SmoothCollapse>
     </div>
   </div>
 </template>
@@ -61,6 +63,7 @@ import { ref, computed, reactive, watch, onMounted } from 'vue';
 import { formatMoney } from '../composables/useInsuranceCalc.js';
 import { useCurrencyRate } from '../composables/useCurrencyRate.js';
 import InfoTooltip from './InfoTooltip.vue';
+import SmoothCollapse from './SmoothCollapse.vue';
 import { useI18n } from '../i18n/index.js';
 
 const { t, tip, pluralYears, dict } = useI18n();
@@ -141,7 +144,12 @@ const coverageRows = computed(() =>
 
 function fmt(v) { return formatMoney(v) + '\u00A0₸'; }
 
+// Пользователи с prefers-reduced-motion получают значения сразу, без count-up.
+const REDUCED_MOTION = typeof window !== 'undefined'
+  && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 function animateTo(key, target, duration = 700) {
+  if (REDUCED_MOTION) { animated[key] = Number(target || 0); return; }
   const start = Number(animated[key] || 0), end = Number(target || 0), t0 = performance.now();
   function tick(now) {
     const p = Math.min((now - t0) / duration, 1);
@@ -155,6 +163,11 @@ function animateTo(key, target, duration = 700) {
 function animateRider(key, premiumTarget, sumTarget, duration = 700) {
   if (!animatedRiders[key]) animatedRiders[key] = { premium: 0, sum: 0 };
   const slot = animatedRiders[key];
+  if (REDUCED_MOTION) {
+    slot.premium = Number(premiumTarget || 0);
+    slot.sum = Number(sumTarget || 0);
+    return;
+  }
   [['premium', premiumTarget], ['sum', sumTarget]].forEach(([field, target]) => {
     const start = Number(slot[field] || 0), end = Number(target || 0), t0 = performance.now();
     function tick(now) {
@@ -674,5 +687,38 @@ watch(() => props.result, (r) => {
   .dsc-title { font-size: 14px; }
   .dsc-sub { font-size: 10px; }
   .dsc-value { font-size: 16px; }
+}
+
+/* ══════════ UX-полировка: блик бейджей и каскад строк ══════════ */
+.summary-badge {
+  position: relative;
+}
+/* Разовый глянцевый блик по бейджу после появления результата.
+   Анимируется background-position внутри статичного слоя — ничего
+   не выезжает за пределы бейджа, overflow не нужен. */
+.summary-badge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.30) 50%, transparent 60%);
+  background-size: 220% 100%;
+  background-position: -120% 0;
+  background-repeat: no-repeat;
+  animation: badgeSheen 1.3s ease 0.45s 1 both;
+  pointer-events: none;
+}
+@keyframes badgeSheen {
+  to { background-position: 220% 0; }
+}
+/* Каскадное появление строк детализации */
+.detail-body .total-header-row,
+.detail-body .total-row {
+  animation: rowIn 0.35s ease both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 </style>

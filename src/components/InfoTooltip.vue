@@ -14,19 +14,21 @@
       <div v-if="open && pinned" class="info-backdrop" @click="close" />
 
       <!-- Пузырь-подсказка у иконки — один и тот же на десктопе и мобильном -->
-      <div
-        v-if="open"
-        class="info-tip"
-        :class="[`tip-${placement}`, { pinned }]"
-        :style="tipStyle"
-        @mouseenter="onEnter"
-        @mouseleave="onLeave"
-        @click.stop
-      >
-        <span class="tip-arrow" :style="arrowStyle" />
-        <div class="tip-title">{{ title }}</div>
-        <div class="tip-body" v-html="text" />
-      </div>
+      <Transition name="tipfade">
+        <div
+          v-if="open"
+          class="info-tip"
+          :class="[`tip-${placement}`, { pinned }]"
+          :style="tipStyle"
+          @mouseenter="onEnter"
+          @mouseleave="onLeave"
+          @click.stop
+        >
+          <span class="tip-arrow" :style="arrowStyle" />
+          <div class="tip-title">{{ title }}</div>
+          <div class="tip-body" v-html="text" />
+        </div>
+      </Transition>
     </Teleport>
   </span>
 </template>
@@ -223,6 +225,10 @@ const arrowStyle = computed(() => ({ left: arrowLeft.value + 'px' }));
 
 /* Закреплённая подсказка чуть заметнее */
 .info-tip.pinned { border-color: rgba(161, 201, 90, 0.55); }
+
+/* Плавное исчезание пузыря (появление — существующие keyframes tipIn*) */
+.tipfade-leave-active { transition: opacity 0.14s ease; }
+.tipfade-leave-to { opacity: 0; }
 
 /* На мобильном — текст крупнее для удобства чтения */
 @media (max-width: 720px) {

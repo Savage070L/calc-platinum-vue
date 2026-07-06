@@ -360,4 +360,27 @@ watch(local, (val) => emit('update:modelValue', { ...val }), { deep: true });
   .rider-row-content { flex-wrap: wrap; gap: 8px; }
   .rider-row-content select { width: 100%; }
 }
+
+/* ══════════ UX-полировка: hover строк и pop чекбоксов ══════════ */
+.rider-check-row {
+  padding: 8px 8px;
+  margin: 0 -8px;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+@media (hover: hover) {
+  .rider-check-row:hover { background: rgba(95,189,245,0.08); }
+}
+.rider-chk-wrap:hover .rider-chk-box {
+  background: rgba(255,255,255,0.24);
+  box-shadow: 0 0 0 3px rgba(161,201,90,0.18);
+}
+.rider-chk:checked ~ .rider-chk-box {
+  animation: riderChkPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes riderChkPop {
+  0%   { transform: scale(0.85); }
+  55%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
 </style>
