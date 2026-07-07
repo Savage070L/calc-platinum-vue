@@ -1,6 +1,17 @@
 <template>
   <div id="app">
     <main class="app-main">
+      <!-- Дисклеймер: расчёт предварительный (RU + KZ) -->
+      <div class="preliminary-note" role="note">
+        <p class="pn-row">
+          <span class="pn-lang">RU</span>
+          <span class="pn-text">Данный расчет является предварительным. Настоящие размеры страховой суммы и премии определяются после оценки рисков при оформлении договора (полиса) страхования.</span>
+        </p>
+        <p class="pn-row">
+          <span class="pn-lang">KZ</span>
+          <span class="pn-text">Бұл — алдын ала жасалған есеп. Сақтандыру сомасы мен сыйлықақысының нақты мөлшері сақтандыру шартын рәсімдеу кезінде, тәуекелдерді бағалаудан кейін анықталады.</span>
+        </p>
+      </div>
       <InsuranceCalculator />
     </main>
   </div>
@@ -178,6 +189,66 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .app-main { min-height: calc(100vh - 64px); background: #FFFFFF; }
+
+/* ── Дисклеймер «расчёт предварительный» (RU + KZ) ── */
+.preliminary-note {
+  width: calc(100% - 24px);
+  max-width: calc(1880px - 24px);
+  margin: 12px auto 0;
+  padding: 13px 18px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #FDF1F1 0%, #FBEAEA 100%);
+  border: 1.5px solid rgba(198, 40, 40, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pn-row {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.pn-lang {
+  flex-shrink: 0;
+  margin-top: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #C62828;
+  color: #FFFFFF;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+.pn-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #B71C1C;
+}
+
+@media (max-width: 720px) {
+  .preliminary-note {
+    width: calc(100% - 12px);
+    margin-top: 8px;
+    padding: 11px 13px;
+    border-radius: 14px;
+    gap: 7px;
+  }
+  .pn-text { font-size: 12.5px; }
+}
+
+@media (max-width: 480px) {
+  .preliminary-note {
+    width: calc(100% - 8px);
+    padding: 10px 11px;
+    border-radius: 12px;
+  }
+  .pn-text { font-size: 12px; }
+  .pn-lang { font-size: 9.5px; padding: 2px 7px; }
+}
 
 @media (max-width: 720px) {
   .app-header { padding: 10px 14px; flex-wrap: wrap; gap: 6px; }
