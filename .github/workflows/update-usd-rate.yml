@@ -2,8 +2,14 @@ name: Update USD rate from NBRK
 
 on:
   schedule:
-    # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
-    - cron: '0 */6 * * *'
+    # НБРК публикует курс 2 раза в день: в 11:02 и 15:32 по Алматы (UTC+5).
+    # Забираем сразу после публикации + дубль-прогон на случай задержек
+    # планировщика GitHub (коммит происходит только если курс изменился).
+    - cron: '10 6 * * *'   # 11:10 Алматы — после публикации 11:02
+    - cron: '40 6 * * *'   # 11:40 Алматы — страховка
+    - cron: '40 10 * * *'  # 15:40 Алматы — после публикации 15:32
+    - cron: '10 11 * * *'  # 16:10 Алматы — страховка
+    - cron: '0 1 * * *'    # 06:00 Алматы — ночная сверка на случай пропуска
   workflow_dispatch: # manual trigger
 
 jobs:
@@ -21,46 +27,66 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Fetch USD rate from NBRK
+      - name: Fetch USD rate from NBRK (rss/rates_all.xml)
         run: |
-          DATE=$(date -u +"%d.%m.%Y")
-          URL="https://nationalbank.kz/rss/get_rates.cfm?fdate=${DATE}"
-
-          XML=$(curl -sf --max-time 15 "$URL" || true)
+          URL="https://nationalbank.kz/rss/rates_all.xml"
+          XML=$(curl -sf --max-time 20 "$URL" || true)
 
           if [ -z "$XML" ]; then
             echo "::warning::NBRK request failed, keeping existing file"
             exit 0
           fi
 
-          # Parse rate and date from XML
-          RATE=$(echo "$XML" | grep -A2 '<title>USD</title>' | grep '<description>' | sed 's/.*<description>\(.*\)<\/description>.*/\1/' | tr -d '[:space:]')
-          FDATE=$(echo "$XML" | grep '<date>' | head -1 | sed 's/.*<date>\(.*\)<\/date>.*/\1/' | tr -d '[:space:]')
+          # Нормализуем XML (тег на строку) и берём блок item для USD:
+          #   <title>USD</title><pubDate>07.07.2026</pubDate>
+          #   <description>472.03</description><quant>1</quant>
+          BLOCK=$(echo "$XML" | sed 's/></>\n</g' | grep -A6 '<title>USD</title>' || true)
 
-          if [ -z "$RATE" ]; then
-            echo "::warning::Could not parse USD rate, keeping existing file"
+          RATE=$(echo "$BLOCK"  | sed -n 's/.*<description>\([0-9.,][0-9.,]*\)<\/description>.*/\1/p' | head -1 | tr ',' '.')
+          FDATE=$(echo "$BLOCK" | sed -n 's/.*<pubDate>\([0-9.][0-9.]*\)<\/pubDate>.*/\1/p' | head -1)
+          QUANT=$(echo "$BLOCK" | sed -n 's/.*<quant>\([0-9][0-9]*\)<\/quant>.*/\1/p' | head -1)
+
+          if [ -z "$RATE" ] || [ -z "$FDATE" ]; then
+            echo "::warning::Could not parse USD from rates_all.xml, keeping existing file"
             exit 0
           fi
 
-          echo "Parsed rate: $RATE, date: $FDATE"
+          # Курс за 1 единицу валюты (у USD quant всегда 1 — на всякий случай)
+          if [ -n "$QUANT" ] && [ "$QUANT" -gt 1 ] 2>/dev/null; then
+            RATE=$(awk -v r="$RATE" -v q="$QUANT" 'BEGIN{printf "%g", r/q}')
+          fi
 
-          # Write JSON
-          cat > docs/usd-rate.json <<EOF
-          {
-            "rate": ${RATE},
-            "date": "${FDATE}",
-            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          }
-          EOF
+          # Санити-проверка: курс — положительное число в разумных пределах
+          if ! awk -v r="$RATE" 'BEGIN{exit !(r+0 > 50 && r+0 < 100000)}'; then
+            echo "::warning::Parsed rate '$RATE' looks invalid, keeping existing file"
+            exit 0
+          fi
 
-          # Clean up leading spaces from heredoc
-          sed -i 's/^          //' docs/usd-rate.json
+          echo "Parsed rate: $RATE, date: $FDATE (NBRK rss/rates_all.xml)"
+
+          # Перезаписываем только если курс/дата изменились или копии разошлись —
+          # иначе каждый прогон плодил бы пустые коммиты из-за поля updated.
+          CUR_RATE=$(sed -n 's/.*"rate": *\([0-9.]*\).*/\1/p'  docs/usd-rate.json 2>/dev/null | head -1)
+          CUR_DATE=$(sed -n 's/.*"date": *"\([^"]*\)".*/\1/p' docs/usd-rate.json 2>/dev/null | head -1)
+          if [ "$RATE" = "$CUR_RATE" ] && [ "$FDATE" = "$CUR_DATE" ] \
+             && cmp -s docs/usd-rate.json public/usd-rate.json 2>/dev/null; then
+            echo "Rate unchanged ($RATE @ $FDATE) — nothing to update"
+            exit 0
+          fi
+
+          STAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          # Пишем в обе копии: docs/ читает живой сайт, public/ — dev-сервер и сборка
+          for OUT in public/usd-rate.json docs/usd-rate.json; do
+            mkdir -p "$(dirname "$OUT")"
+            printf '{\n  "rate": %s,\n  "date": "%s",\n  "updated": "%s"\n}\n' \
+              "$RATE" "$FDATE" "$STAMP" > "$OUT"
+          done
 
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/usd-rate.json
+          git add public/usd-rate.json docs/usd-rate.json
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
