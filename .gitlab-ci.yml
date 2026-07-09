@@ -1,0 +1,74 @@
+# GitLab Pages: раздаём уже собранный vite-бандл из закоммиченной папки /docs
+# (эквивалент GitHub Pages «deploy from branch /docs»).
+pages:
+  stage: deploy
+  script:
+    - mkdir -p public && cp -R docs/. public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main"'
+
+# Обновление курса USD от НБРК (https://nationalbank.kz/rss/rates_all.xml).
+# Запускается ТОЛЬКО по расписанию (Pipeline Schedules), привязанному к
+# публикациям НБРК в 11:02 и 15:32 по Алматы. Коммитит только при изменении
+# курса/даты; сам коммит запускает обычный pipeline, который переиздаёт Pages.
+update_usd_rate:
+  stage: build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  script:
+    - |
+      URL="https://nationalbank.kz/rss/rates_all.xml"
+      XML=$(curl -sf --max-time 20 "$URL" || true)
+
+      if [ -z "$XML" ]; then
+        echo "WARNING: NBRK request failed, keeping existing file"
+        exit 0
+      fi
+
+      BLOCK=$(echo "$XML" | sed 's/></>\n</g' | grep -A6 '<title>USD</title>' || true)
+
+      RATE=$(echo "$BLOCK"  | sed -n 's/.*<description>\([0-9.,][0-9.,]*\)<\/description>.*/\1/p' | head -1 | tr ',' '.')
+      FDATE=$(echo "$BLOCK" | sed -n 's/.*<pubDate>\([0-9.][0-9.]*\)<\/pubDate>.*/\1/p' | head -1)
+      QUANT=$(echo "$BLOCK" | sed -n 's/.*<quant>\([0-9][0-9]*\)<\/quant>.*/\1/p' | head -1)
+
+      if [ -z "$RATE" ] || [ -z "$FDATE" ]; then
+        echo "WARNING: could not parse USD from rates_all.xml, keeping existing file"
+        exit 0
+      fi
+
+      if [ -n "$QUANT" ] && [ "$QUANT" -gt 1 ] 2>/dev/null; then
+        RATE=$(awk -v r="$RATE" -v q="$QUANT" 'BEGIN{printf "%g", r/q}')
+      fi
+
+      if ! awk -v r="$RATE" 'BEGIN{exit !(r+0 > 50 && r+0 < 100000)}'; then
+        echo "WARNING: parsed rate '$RATE' looks invalid, keeping existing file"
+        exit 0
+      fi
+
+      echo "Parsed rate: $RATE, date: $FDATE (NBRK rss/rates_all.xml)"
+
+      CUR_RATE=$(sed -n 's/.*"rate": *\([0-9.]*\).*/\1/p'  docs/usd-rate.json 2>/dev/null | head -1)
+      CUR_DATE=$(sed -n 's/.*"date": *"\([^"]*\)".*/\1/p' docs/usd-rate.json 2>/dev/null | head -1)
+      if [ "$RATE" = "$CUR_RATE" ] && [ "$FDATE" = "$CUR_DATE" ]; then
+        echo "Rate unchanged ($RATE @ $FDATE) — nothing to update"
+        exit 0
+      fi
+
+      STAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      for OUT in public/usd-rate.json docs/usd-rate.json; do
+        mkdir -p "$(dirname "$OUT")"
+        printf '{\n  "rate": %s,\n  "date": "%s",\n  "updated": "%s"\n}\n' "$RATE" "$FDATE" "$STAMP" > "$OUT"
+      done
+
+      git config user.name  "gitlab-ci-bot"
+      git config user.email "gitlab-ci-bot@git.sys.corp"
+      git add public/usd-rate.json docs/usd-rate.json
+      if git diff --cached --quiet; then
+        echo "No changes to commit"
+      else
+        git commit -m "chore: update USD rate from NBRK"
+        git push "https://oauth2:${GL_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" HEAD:main
+      fi
